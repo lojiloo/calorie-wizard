@@ -1,0 +1,30 @@
+services:
+  calorie-wizard:
+    build: .
+    image: calorie-wizard-image
+    container_name: calorie-wizard-container
+    ports:
+      - "8080:8080"
+    depends_on:
+      app-db:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://app-db:5432/calorie-wizard-db
+      - SPRING_DATASOURCE_USERNAME=admin
+      - SPRING_DATASOURCE_PASSWORD=12345
+      - SPRING_DRIVER_CLASS_NAME=org.postgresql.Driver
+
+  app-db:
+    image: postgres:16.1
+    container_name: db-container
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=12345
+      - POSTGRES_DB=calorie-wizard-db
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U admin -d calorie-wizard-db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 3

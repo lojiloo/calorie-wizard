@@ -1,0 +1,616 @@
+{
+	"info": {
+		"_postman_id": "1ae21292-7479-443b-b79c-41ba4fe2a522",
+		"name": "calorie-wizard-postman",
+		"description": "Коллекция Postman-тестов проверяет работу эндпоинтов: валидация полей, расчёт значений в DTO и формирование корректных отчётов\n\n1. Проверка на 400 статус при создании пользователя с некорректным полом/целью (проверка кастомной аннотации @CheckEnum);\n    \n2. Проверка пересчёта веса и калорий при повторном добавлении блюда в тот же приём пищи;\n    \n3. Проверка корректности обработки списка блюд, добавленного к приёму пищи;\n    \n4. Проверка отчёта об общем количестве калорий и приёмов пищи за день;\n    \n5. Проверка отчёта о лимите нормы калорий;\n    \n6. Проверка отчёта об общем количестве калорий и приёмов пищи за период.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "37361758"
+	},
+	"item": [
+		{
+			"name": "создание пользователя",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const body = pm.response.json();\r",
+							"\r",
+							"pm.test(\"Создание пользователя: код статуса CREATED 201, ответ в формате JSON\", () => {\r",
+							"    pm.response.to.have.status(201);\r",
+							"    pm.response.to.be.withBody;\r",
+							"    pm.response.to.be.json;\r",
+							"});\r",
+							"\r",
+							"pm.test(\"Поле name в ответе идентично этому же полю запроса\", ()  => {\r",
+							"    pm.expect(body.name).to.be.a(\"string\");\r",
+							"    pm.expect(body.name).to.eql(\"test\");\r",
+							"})\r",
+							"\r",
+							"pm.test(\"Возраст рассчитан корректно\", ()  => {\r",
+							"    pm.expect(body.age).to.eql(25);\r",
+							"})"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{{user-body}}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{uri}}/users",
+					"host": [
+						"{{uri}}"
+					],
+					"path": [
+						"users"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "создание пользователя с некорректным полом",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Создание пользователя с ошибкой в значении *пол*: код статуса BAD REQUEST 400\", () => {\r",
+							"    pm.response.to.have.status(400);\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{{user-body-gender-is-wrong}}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{uri}}/users",
+					"host": [
+						"{{uri}}"
+					],
+					"path": [
+						"users"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "создание пользователя с некорректной целью",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Создание пользователя с ошибкой в значении *цель*: код статуса BAD REQUEST 400\", () => {\r",
+							"    pm.response.to.have.status(400);\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{{user-body-goal-is-wrong}}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{uri}}/users",
+					"host": [
+						"{{uri}}"
+					],
+					"path": [
+						"users"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "создание приёма пищи",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const body = pm.response.json();\r",
+							"\r",
+							"pm.test(\"Создание приёма пищи: код статуса CREATED 201, ответ в формате JSON\", () => {\r",
+							"    pm.response.to.have.status(201);\r",
+							"    pm.response.to.be.withBody;\r",
+							"    pm.response.to.be.json;\r",
+							"});\r",
+							"\r",
+							"pm.test(\"При создании приёма пищи список блюд в меню пуст\", () => {\r",
+							"    pm.expect(body).to.have.property('menu').that.is.an('array').with.lengthOf(0);\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const today = new Date();\r",
+							"const formattedToday = \r",
+							"    today.getFullYear() + \"-\" +\r",
+							"    String(today.getMonth() + 1).padStart(2, \"0\") + \"-\" +\r",
+							"    String(today.getDate()).padStart(2, \"0\");\r",
+							"\r",
+							"const currentTime = \r",
+							"    formattedToday + \" \" +\r",
+							"    String(today.getHours()).padStart(2, \"0\") + \":\" +\r",
+							"    String(today.getMinutes()).padStart(2, \"0\");\r",
+							"pm.variables.set(\"current_datetime\", currentTime);"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"mealtime\": \"{{current_datetime}}\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{uri}}/users/1",
+					"host": [
+						"{{uri}}"
+					],
+					"path": [
+						"users",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "добавление одного блюда",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const body = pm.response.json();\r",
+							"\r",
+							"pm.test(\"Добавление блюда: код статуса CREATED 201, ответ в формате JSON\", () => {\r",
+							"    pm.response.to.have.status(201);\r",
+							"    pm.response.to.be.withBody;\r",
+							"    pm.response.to.be.json;\r",
+							"});\r",
+							"\r",
+							"pm.test(\"После добавления блюда к приёму пищи, список блюд в меню не пуст\", () => {\r",
+							"    pm.expect(body).to.have.property('menu').that.is.an('array').to.have.length.greaterThan(0);\r",
+							"});\r",
+							"\r",
+							"const dish = body.menu[0];\r",
+							"pm.test(\"Вес записан верно\", () => {\r",
+							"    pm.expect(dish).to.have.property(\"weight\", 100);\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{{single-dish-menu}}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{uri}}/users/1/1",
+					"host": [
+						"{{uri}}"
+					],
+					"path": [
+						"users",
+						"1",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "добавление блюда повторно",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const body = pm.response.json();\r",
+							"\r",
+							"pm.test(\"Добавление блюда: код статуса CREATED 201, ответ в формате JSON\", () => {\r",
+							"    pm.response.to.have.status(201);\r",
+							"    pm.response.to.be.withBody;\r",
+							"    pm.response.to.be.json;\r",
+							"});\r",
+							"\r",
+							"const dish = body.menu[0];\r",
+							"pm.test(\"Вес пересчитан верно\", () => {\r",
+							"    pm.expect(dish).to.have.property(\"weight\", 200);\r",
+							"});\r",
+							"\r",
+							"pm.test(\"Калории пересчитаны в соответствии с весом\", () => {\r",
+							"    pm.expect(dish).to.have.property(\"calories\", 100);\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{{single-dish-menu}}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{uri}}/users/1/1",
+					"host": [
+						"{{uri}}"
+					],
+					"path": [
+						"users",
+						"1",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "добавление списка блюд",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const body = pm.response.json();\r",
+							"\r",
+							"pm.test(\"Добавление списка блюд: код статуса CREATED 201, ответ в формате JSON\", () => {\r",
+							"    pm.response.to.have.status(201);\r",
+							"    pm.response.to.be.withBody;\r",
+							"    pm.response.to.be.json;\r",
+							"});\r",
+							"\r",
+							"pm.test(\"После добавления списка блюд сохранены все элементы меню\", () => {\r",
+							"    pm.expect(body).to.have.property('menu').that.is.an('array').with.length(2);\r",
+							"});\r",
+							"\r",
+							"const dish1 = body.menu[0].dish;\r",
+							"pm.test(\"Блюдо с id=1 установлено верно\", () => {\r",
+							"    pm.expect(dish1.name).to.eql(\"яблоко\");\r",
+							"});\r",
+							"const dish2 = body.menu[1].dish;\r",
+							"pm.test(\"Блюдо с id=2 установлено верно\", () => {\r",
+							"    pm.expect(dish2.name).to.eql(\"тунец\");\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{{multi-dish-menu}}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{uri}}/users/1/1",
+					"host": [
+						"{{uri}}"
+					],
+					"path": [
+						"users",
+						"1",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "отчёт: общее количество калорий и блюд",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const body = pm.response.json();\r",
+							"\r",
+							"pm.test(\"Запрос отчёта: код статуса OK 200, ответ в формате JSON\", () => {\r",
+							"    pm.response.to.have.status(200);\r",
+							"    pm.response.to.be.withBody;\r",
+							"    pm.response.to.be.json;\r",
+							"});\r",
+							"\r",
+							"pm.test(\"Тип данных верен\", () => {\r",
+							"    pm.expect(body).to.have.property(\"meals_total\").that.is.a(\"number\");\r",
+							"    pm.expect(body).to.have.property(\"calories_total\").that.is.a(\"number\");\r",
+							"})\r",
+							"\r",
+							"pm.test(\"Количество приёмов пищи рассчитано верно\", ()  => {\r",
+							"    pm.expect(body).to.have.property(\"meals_total\", 1);\r",
+							"})\r",
+							"\r",
+							"pm.test(\"Количество калорий рассчитано верно\", ()  => {\r",
+							"    pm.expect(body.calories_total).to.eql(250);\r",
+							"})"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{uri}}/users/1/reports/current",
+					"host": [
+						"{{uri}}"
+					],
+					"path": [
+						"users",
+						"1",
+						"reports",
+						"current"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "отчёт: проверка нормы калорий",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const body = pm.response.json();\r",
+							"\r",
+							"pm.test(\"Запрос отчёта: код статуса OK 200, ответ в формате JSON\", () => {\r",
+							"    pm.response.to.have.status(200);\r",
+							"    pm.response.to.be.withBody;\r",
+							"    pm.response.to.be.json;\r",
+							"});\r",
+							"\r",
+							"pm.test(\"Тип данных верен\", () => {\r",
+							"    pm.expect(body).to.have.property(\"is_limit_exceeded\").that.is.a(\"boolean\");\r",
+							"    pm.expect(body).to.have.property(\"calories_over_limit\").that.is.a(\"number\");\r",
+							"})\r",
+							"\r",
+							"pm.test(\"Лимит нормы калорий не должен быть достигнут\", ()  => {\r",
+							"    pm.expect(body).to.have.property(\"is_limit_exceeded\", false);\r",
+							"})\r",
+							"\r",
+							"pm.test(\"Норма калорий не превышена (калорий сверх нормы: 0)\", ()  => {\r",
+							"    pm.expect(body).to.have.property(\"calories_over_limit\", 0);\r",
+							"})"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{uri}}/users/1/reports/limit",
+					"host": [
+						"{{uri}}"
+					],
+					"path": [
+						"users",
+						"1",
+						"reports",
+						"limit"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "отчёт: общий по дням",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const today = new Date();\r",
+							"const formattedToday = \r",
+							"    today.getFullYear() + \"-\" +\r",
+							"    String(today.getMonth() + 1).padStart(2, \"0\") + \"-\" +\r",
+							"    String(today.getDate()).padStart(2, \"0\");\r",
+							"pm.variables.set(\"current_date\", formattedToday);\r",
+							"\r",
+							"const yesterday = new Date(today);\r",
+							"yesterday.setDate(today.getDate() - 1);\r",
+							"const formattedYesterday = \r",
+							"    yesterday.getFullYear() + \"-\" +\r",
+							"    String(yesterday.getMonth() + 1).padStart(2, \"0\") + \"-\" +\r",
+							"    String(yesterday.getDate()).padStart(2, \"0\");\r",
+							"pm.variables.set(\"yesterday_date\", formattedYesterday);"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const body = pm.response.json();\r",
+							"const keys = Object.keys(body);\r",
+							"\r",
+							"pm.test(\"Запрос отчёта: код статуса OK 200, ответ в формате JSON\", () => {\r",
+							"    pm.response.to.have.status(200);\r",
+							"    pm.response.to.be.withBody;\r",
+							"    pm.response.to.be.json;\r",
+							"});\r",
+							"\r",
+							"const date = body[0];\r",
+							"pm.test(\"Список содержит корректное число приёмов пищи за указанный период\", () => {\r",
+							"    pm.expect(body[keys[0]]).to.not.be.empty;\r",
+							"    pm.expect(keys).to.have.lengthOf(1);\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{uri}}/users/1/reports/total?start={{yesterday_date}}&end={{current_date}}",
+					"host": [
+						"{{uri}}"
+					],
+					"path": [
+						"users",
+						"1",
+						"reports",
+						"total"
+					],
+					"query": [
+						{
+							"key": "start",
+							"value": "{{yesterday_date}}"
+						},
+						{
+							"key": "end",
+							"value": "{{current_date}}"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "uri",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "user-body",
+			"value": "{\n    \"name\": \"test\",\n    \"email\": \"test@test.com\",\n    \"birthday\": \"2000-01-01\",\n    \"sex\": \"FEMALE\",\n    \"weight\": 50,\n    \"height\": 150,\n    \"goal\": \"MAINTENANCE\"\n}",
+			"type": "string"
+		},
+		{
+			"key": "user-body-gender-is-wrong",
+			"value": "{\n    \"sex\": \"FAIL\",\n    \"name\": \"test\",\n    \"email\": \"test@test.com\",\n    \"birthday\": \"2000-01-01\",\n    \"weight\": 50,\n    \"height\": 150,\n    \"goal\": \"MAINTENANCE\"\n}",
+			"type": "string"
+		},
+		{
+			"key": "user-body-goal-is-wrong",
+			"value": "{\n    \"goal\": \"FAIL\",\n    \"name\": \"test\",\n    \"email\": \"test@test.com\",\n    \"birthday\": \"2000-01-01\",\n    \"sex\": \"FEMALE\",\n    \"weight\": 50,\n    \"height\": 150\n}",
+			"type": "string"
+		},
+		{
+			"key": "single-dish-menu",
+			"value": "{\n    \"menu\": [\n        {\n            \"dish_id\": 1,\n            \"weight\": 100\n        }\n    ]\n}",
+			"type": "string"
+		},
+		{
+			"key": "multi-dish-menu",
+			"value": "{\n    \"menu\": [\n        {\n            \"dish_id\": 1,\n            \"weight\": 100\n        },{\n            \"dish_id\": 2,\n            \"weight\": 100\n        }\n    ]\n}",
+			"type": "string"
+		}
+	]
+}
